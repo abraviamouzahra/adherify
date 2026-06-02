@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type VerifyStatus = "loading" | "success" | "error";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -138,5 +138,33 @@ export default function VerifyEmailPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function VerifyEmailFallback() {
+  return (
+    <main className="min-h-screen bg-[#f8fbff] text-[#0b2740]">
+      <section className="flex min-h-screen items-center justify-center px-6 py-10">
+        <div className="w-full max-w-[520px] rounded-[30px] border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 text-4xl text-blue-600">
+            ⏳
+          </div>
+          <h1 className="mt-7 text-[32px] font-bold tracking-tight text-[#151821] sm:text-[40px]">
+            Loading verification
+          </h1>
+          <p className="mt-4 text-[15px] leading-7 text-slate-500 sm:text-[17px]">
+            Preparing your email verification page...
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailFallback />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
