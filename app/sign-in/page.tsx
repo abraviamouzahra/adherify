@@ -58,14 +58,15 @@ export default function SignInPage() {
                 body: JSON.stringify({
                     email,
                     password,
-                    role,
                 }),
             });
 
             const token =
                 loginData?.access_token ||
+                loginData?.accessToken ||
                 loginData?.token ||
                 loginData?.data?.access_token ||
+                loginData?.data?.accessToken ||
                 loginData?.data?.token;
 
             if (!token) {
@@ -73,6 +74,7 @@ export default function SignInPage() {
             }
 
             localStorage.setItem("token", token);
+            localStorage.setItem("access_token", token);
 
             let profile: UserProfile | null = null;
 
@@ -81,35 +83,47 @@ export default function SignInPage() {
                     method: "GET",
                 });
 
-                profile = profileData?.data || profileData?.user || profileData;
-                localStorage.setItem("user", JSON.stringify(profile));
+                profile =
+                    profileData?.data?.user ||
+                    profileData?.user ||
+                    profileData?.data ||
+                    profileData;
             } catch (profileErr) {
                 console.log("Failed to fetch profile:", profileErr);
 
                 profile =
-                    loginData?.user ||
                     loginData?.data?.user ||
-                    ({
-                        email,
-                        role,
-                    } as UserProfile);
-
-                localStorage.setItem("user", JSON.stringify(profile));
+                    loginData?.user ||
+                    loginData?.data ||
+                    null;
             }
 
-            const finalRole = profile?.role || role;
+            const tokenRole = getRoleFromToken(token);
+
+            const finalRole = String(
+                profile?.role || tokenRole || role
+            ).toUpperCase() as Role;
+
+            const normalizedProfile: UserProfile = {
+                ...(profile || {}),
+                email: profile?.email || email,
+                role: finalRole,
+            };
+
+            localStorage.setItem("user", JSON.stringify(normalizedProfile));
+            localStorage.setItem("role", finalRole);
 
             if (finalRole === "DOCTOR") {
-                router.push("/doctor/dashboard");
+                router.replace("/doctor/dashboard");
                 return;
             }
 
             if (finalRole === "PATIENT") {
-                router.push("/patient/dashboard");
+                router.replace("/patient/dashboard");
                 return;
             }
 
-            router.push("/");
+            throw new Error("Role akun tidak dikenali.");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Sign in gagal.");
         } finally {
