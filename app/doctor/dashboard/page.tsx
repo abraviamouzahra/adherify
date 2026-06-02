@@ -68,6 +68,13 @@ type Verification = {
   };
 };
 
+type CurrentUser = {
+  id?: string;
+  email?: string;
+  username?: string;
+  role?: string;
+};
+
 const PATIENTS_ENDPOINT = "/patients";
 const MEDICATIONS_ENDPOINT = "/medications";
 const SCHEDULES_ENDPOINT = "/schedules";
@@ -108,6 +115,16 @@ function formatDateTime(date?: string | null) {
 
 function getMedicationName(schedule: Schedule) {
   return schedule.medicine?.name || "-";
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function DashboardIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -443,6 +460,19 @@ export default function DoctorDashboardPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+
+    if (!storedUser) return;
+
+    try {
+      setCurrentUser(JSON.parse(storedUser));
+    } catch {
+      setCurrentUser(null);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -524,6 +554,14 @@ export default function DoctorDashboardPage() {
   const activeScheduleCount = schedules.length;
   const totalPatientCount = patients.length;
   const totalMedicationCount = medications.length;
+
+  const displayName =
+    currentUser?.username || currentUser?.email || "User";
+
+  const displayRole =
+    currentUser?.role === "DOCTOR" ? "Medical Staff" : "Account";
+
+  const userInitials = getInitials(displayName);
 
   const recentActivity = useMemo<RecentItem[]>(() => {
     const recentPatients = patients.slice(0, 2).map((patient) => ({
@@ -661,10 +699,10 @@ export default function DoctorDashboardPage() {
                 <div className="flex items-center gap-3">
                   {/* DOCTOR IMAGE PLACEHOLDER */}
                   <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-600">
-                    DR
+                    {userInitials}
                   </div>
                   <div className="hidden md:block">
-                    <p className="text-sm font-bold text-[#0b2740]">Doctor</p>
+                    <p className="text-sm font-bold text-[#0b2740]">{displayName}</p>
                     <p className="text-xs text-slate-500">Medical Staff</p>
                   </div>
                   <ChevronRight className="hidden h-4 w-4 rotate-90 text-slate-500 md:block" />
@@ -674,7 +712,7 @@ export default function DoctorDashboardPage() {
 
             <section className="mb-6">
               <h1 className="text-[34px] font-bold leading-none tracking-tight text-[#151821] md:text-[42px]">
-                Hi, Doctor
+                Hi, {displayName}
               </h1>
               <p className="mt-3 text-base text-slate-500 md:text-lg">
                 Here&apos;s your clinic overview for today.
