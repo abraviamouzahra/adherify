@@ -14,9 +14,7 @@ type DoctorOption = {
 
 const AUTH_ENDPOINTS = {
     getDoctors: "/auth/doctors",
-    registerDoctor: "/auth/register",
-    registerPatientWithDoctor: "/auth/register",
-    registerPatientWithoutDoctor: "/auth/register",
+    register: "/auth/register",
 };
 
 export default function SignUpPage() {
@@ -72,43 +70,27 @@ export default function SignUpPage() {
         setError("");
 
         try {
-            if (role === "DOCTOR") {
-                await apiFetch(AUTH_ENDPOINTS.registerDoctor, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        username,
-                        email,
-                        password,
-                        role,
-                    }),
-                });
+            const payload: {
+                email: string;
+                username: string;
+                password: string;
+                role: Role;
+                doctorId?: string;
+            } = {
+                email,
+                username,
+                password,
+                role,
+            };
+
+            if (role === "PATIENT" && connectWithDoctor && selectedDoctorId) {
+                payload.doctorId = selectedDoctorId;
             }
 
-            if (role === "PATIENT") {
-                const shouldAssignDoctor = connectWithDoctor && selectedDoctorId;
-
-                if (shouldAssignDoctor) {
-                    await apiFetch(AUTH_ENDPOINTS.registerPatientWithDoctor, {
-                        method: "POST",
-                        body: JSON.stringify({
-                            username,
-                            email,
-                            password,
-                            role,
-                            doctorId: selectedDoctorId,
-                        }),
-                    });
-                } else {
-                    await apiFetch(AUTH_ENDPOINTS.registerPatientWithoutDoctor, {
-                        method: "POST",
-                        body: JSON.stringify({
-                            username,
-                            email,
-                            password,
-                        }),
-                    });
-                }
-            }
+            await apiFetch(AUTH_ENDPOINTS.register, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
 
             setRegisteredEmail(email);
             setIsEmailSent(true);
@@ -219,7 +201,11 @@ export default function SignUpPage() {
                                 <div className="grid h-[54px] grid-cols-2 rounded-[10px] bg-slate-100 p-1 sm:h-[58px] xl:h-[46px] xl:rounded-[7px]">
                                     <button
                                         type="button"
-                                        onClick={() => setRole("DOCTOR")}
+                                        onClick={() => {
+                                            setRole("DOCTOR");
+                                            setConnectWithDoctor(false);
+                                            setSelectedDoctorId("");
+                                        }}
                                         className={`rounded-[8px] text-[14px] font-semibold transition sm:text-[17px] xl:text-[13px] ${role === "DOCTOR"
                                             ? "bg-[#07324a] text-white shadow-sm"
                                             : "text-slate-500 hover:text-[#07324a]"
