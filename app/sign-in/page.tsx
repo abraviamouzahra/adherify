@@ -58,6 +58,7 @@ export default function SignInPage() {
                 body: JSON.stringify({
                     email,
                     password,
+                    role,
                 }),
             });
 
