@@ -6,6 +6,14 @@ import { apiFetch } from "@/lib/api";
 
 type Role = "DOCTOR" | "PATIENT";
 
+type AuthProfile = {
+    id?: string;
+    email?: string;
+    username?: string;
+    role?: string;
+    patientProfile?: unknown;
+};
+
 type UserProfile = {
     id?: string;
     email?: string;
@@ -14,8 +22,7 @@ type UserProfile = {
 };
 
 const AUTH_ENDPOINTS = {
-    loginDoctor: "/auth/login",
-    loginPatient: "/auth/login",
+    login: "/auth/login",
     profile: "/auth/me",
 };
 
@@ -36,7 +43,6 @@ export default function SignInPage() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [role, setRole] = useState<Role>("DOCTOR");
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -48,12 +54,7 @@ export default function SignInPage() {
         setError("");
 
         try {
-            const loginEndpoint =
-                role === "DOCTOR"
-                    ? AUTH_ENDPOINTS.loginDoctor
-                    : AUTH_ENDPOINTS.loginPatient;
-
-            const loginData = await apiFetch(loginEndpoint, {
+            const loginData = await apiFetch(AUTH_ENDPOINTS.login, {
                 method: "POST",
                 body: JSON.stringify({
                     email,
@@ -76,7 +77,7 @@ export default function SignInPage() {
             localStorage.setItem("token", token);
             localStorage.setItem("access_token", token);
 
-            let profile: UserProfile | null = null;
+            let profile: AuthProfile | null = null;
 
             try {
                 const profileData = await apiFetch(AUTH_ENDPOINTS.profile, {
@@ -100,14 +101,24 @@ export default function SignInPage() {
 
             const tokenRole = getRoleFromToken(token);
 
-            const finalRole = String(
-                profile?.role || tokenRole || role
-            ).toUpperCase() as Role;
+            const rawRole = String(profile?.role || tokenRole || "").toUpperCase();
 
-            const normalizedProfile: UserProfile = {
-                ...(profile || {}),
+            if (!rawRole || rawRole === "UNDEFINED" || rawRole === "NULL") {
+                throw new Error("Role akun tidak ditemukan.");
+            }
+
+            if (rawRole !== "DOCTOR" && rawRole !== "PATIENT") {
+                throw new Error("Role akun tidak dikenali.");
+            }
+
+            const finalRole = rawRole as Role;
+
+            const normalizedProfile = {
+                id: profile?.id || "",
                 email: profile?.email || email,
+                username: profile?.username || profile?.email || email,
                 role: finalRole,
+                patientProfile: profile?.patientProfile || null,
             };
 
             localStorage.setItem("user", JSON.stringify(normalizedProfile));
@@ -167,35 +178,6 @@ export default function SignInPage() {
                             onSubmit={handleSignIn}
                             className="mt-8 space-y-6 sm:mt-10 sm:space-y-8 xl:mt-10 xl:space-y-6"
                         >
-                            <div>
-                                <label className="mb-2 block text-[15px] font-medium text-slate-500 sm:text-[18px] xl:text-[13px]">
-                                    Sign in as
-                                </label>
-
-                                <div className="grid h-[54px] grid-cols-2 rounded-[10px] bg-slate-100 p-1 sm:h-[58px] xl:h-[46px] xl:rounded-[7px]">
-                                    <button
-                                        type="button"
-                                        onClick={() => setRole("DOCTOR")}
-                                        className={`rounded-[8px] text-[14px] font-semibold transition sm:text-[17px] xl:text-[13px] ${role === "DOCTOR"
-                                            ? "bg-[#07324a] text-white shadow-sm"
-                                            : "text-slate-500 hover:text-[#07324a]"
-                                            }`}
-                                    >
-                                        Doctor
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setRole("PATIENT")}
-                                        className={`rounded-[8px] text-[14px] font-semibold transition sm:text-[17px] xl:text-[13px] ${role === "PATIENT"
-                                            ? "bg-[#07324a] text-white shadow-sm"
-                                            : "text-slate-500 hover:text-[#07324a]"
-                                            }`}
-                                    >
-                                        Patient
-                                    </button>
-                                </div>
-                            </div>
 
                             <div>
                                 <label className="mb-2 block text-[15px] font-medium text-slate-500 sm:text-[18px] xl:text-[13px]">
@@ -266,9 +248,7 @@ export default function SignInPage() {
                                 disabled={loading}
                                 className="h-[52px] w-full rounded-[22px] bg-[#07324a] text-[17px] font-semibold text-white transition hover:bg-[#062a3e] disabled:cursor-not-allowed disabled:opacity-60 sm:h-[68px] sm:rounded-[16px] sm:text-[22px] xl:h-[52px] xl:rounded-[10px] xl:text-[15px]"
                             >
-                                {loading
-                                    ? "Signing in..."
-                                    : `Sign in as ${role === "DOCTOR" ? "Doctor" : "Patient"}`}
+                                {loading ? "Signing in..." : "Sign in"}
                             </button>
                         </form>
                     </div>
