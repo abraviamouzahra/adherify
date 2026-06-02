@@ -1,4 +1,3 @@
-"VERIFICATION"
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -16,9 +15,11 @@ type Verification = {
   status?: string;
   note?: string;
   patient_note?: string;
-  rejection_reason?: string;
+  rejection_reason?: string | null;
   created_at?: string;
   uploaded_at?: string;
+  verified_by_id?: string | null;
+  verified_at?: string | null;
 
   patient?: {
     id?: string;
@@ -28,6 +29,7 @@ type Verification = {
     gender?: string;
     user?: {
       email?: string;
+      username?: string;
     };
   };
 
@@ -80,7 +82,12 @@ type Patient = {
   };
 };
 
-
+type CurrentUser = {
+  id?: string;
+  email?: string;
+  username?: string;
+  role?: string;
+};
 
 const WAITING_VERIFICATIONS_ENDPOINT = "/doctor/verifications";
 const APPROVE_ENDPOINT = (id: string) => `/doctor/consumptions/${id}/approve`;
@@ -129,7 +136,7 @@ function getPatientName(item: Verification, patients: Patient[]) {
     );
   });
 
-  return matchedPatient?.full_name || "-";
+  return matchedPatient?.full_name || "Patient";
 }
 
 function getPatientAge(item: Verification, patients: Patient[]) {
@@ -173,9 +180,17 @@ function getPatientNote(item: Verification) {
 }
 
 function getUploadedTime(item: Verification) {
-  if (item.uploaded_at) return item.uploaded_at;
-  if (item.created_at) return new Date(item.created_at).toLocaleString("id-ID");
-  return "-";
+  const dateValue = item.uploaded_at || item.created_at;
+
+  if (!dateValue) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(dateValue));
 }
 
 function getInitials(name: string) {
@@ -378,6 +393,7 @@ export default function DoctorVerificationsPage() {
   const [verificationsFromApi, setVerificationsFromApi] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("WAITING_VERIFICATION");
@@ -420,6 +436,10 @@ export default function DoctorVerificationsPage() {
   const rejectedCount = verifications.filter(
     (item) => normalizeStatus(item.verification_status || item.status) === "REJECTED"
   ).length;
+
+  const displayName = currentUser?.username || currentUser?.email || "User";
+  const displayRole = currentUser?.role === "DOCTOR" ? "Medical Staff" : "Account";
+  const userInitials = getInitials(displayName);
 
   const sidebarWidthClass = isSidebarCollapsed ? "xl:ml-[96px]" : "xl:ml-[272px]";
   const sidebarBaseWidthClass = isSidebarCollapsed ? "w-[96px]" : "w-[272px]";
@@ -468,6 +488,18 @@ export default function DoctorVerificationsPage() {
       setPatientsFromApi([]);
     }
   }
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+
+    if (!storedUser) return;
+
+    try {
+      setCurrentUser(JSON.parse(storedUser));
+    } catch {
+      setCurrentUser(null);
+    }
+  }, []);
 
   useEffect(() => {
     fetchVerifications();
@@ -667,7 +699,7 @@ export default function DoctorVerificationsPage() {
                 <div className="flex items-center gap-3">
                   {/* DOCTOR IMAGE PLACEHOLDER */}
                   <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-600">
-                    DR
+                    {userInitials}
                   </div>
                   <div className="hidden md:block">
                     <p className="text-sm font-bold text-[#0b2740]">Doctor</p>
@@ -1032,14 +1064,8 @@ export default function DoctorVerificationsPage() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-4 border-t border-slate-100 px-5 py-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
-                <p>
-                  Showing 1 to {filteredVerifications.length} of {verifications.length} verifications
-                </p>
-
-                <div className="border-t border-slate-100 px-5 py-4 text-sm text-slate-500">
-                  Showing {filteredVerifications.length} of {verifications.length} verifications
-                </div>
+              <div className="border-t border-slate-100 px-5 py-4 text-sm text-slate-500">
+                Showing {filteredVerifications.length} of {verifications.length} verifications
               </div>
             </section>
           </div>

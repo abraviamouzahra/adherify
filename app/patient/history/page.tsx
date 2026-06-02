@@ -15,22 +15,46 @@ type HistoryStatus =
 
 type HistoryItem = {
   id: string;
+  schedule_id?: string;
+  patient_id?: string;
+
   medicine_name?: string;
   medication_name?: string;
   name?: string;
   dose?: string;
   date?: string;
   time?: string;
+
   status?: HistoryStatus;
+  verification_status?: HistoryStatus;
+
   note?: string;
-  rejection_reason?: string;
+  rejection_reason?: string | null;
+
   proof_image?: string;
   proofImage?: string;
+
+  created_at?: string;
+  verified_at?: string | null;
+  taken_at?: string | null;
+
   medication?: {
     name?: string;
   };
+
   medicine?: {
     name?: string;
+  };
+
+  schedule?: {
+    time?: string;
+    dose?: string;
+    medicine?: {
+      name?: string;
+    };
+    medication?: {
+      name?: string;
+    };
   };
 };
 
@@ -56,40 +80,38 @@ function getMedicineName(item: HistoryItem) {
     item.medicine_name ||
     item.medication_name ||
     item.name ||
-    "-"
+    "Medication Schedule"
   );
+}
+
+function getHistoryStatus(item: HistoryItem) {
+  return item.verification_status || item.status || "WAITING_VERIFICATION";
 }
 
 function getHistoryDate(item: HistoryItem) {
   if (item.date) return item.date;
 
-  const rawDate =
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .taken_at ||
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .verified_at ||
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .created_at;
+  const rawDate = item.taken_at || item.verified_at || item.created_at;
 
-  return rawDate ? new Date(rawDate).toLocaleDateString("id-ID") : "-";
+  return rawDate
+    ? new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(rawDate))
+    : "-";
 }
 
 function getHistoryTime(item: HistoryItem) {
   if (item.time) return item.time;
 
-  const rawDate =
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .taken_at ||
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .verified_at ||
-    (item as HistoryItem & { created_at?: string; verified_at?: string; taken_at?: string })
-      .created_at;
+  const rawDate = item.taken_at || item.verified_at || item.created_at;
 
   return rawDate
-    ? new Date(rawDate).toLocaleTimeString("id-ID", {
+    ? new Intl.DateTimeFormat("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
-    })
+    }).format(new Date(rawDate))
     : "-";
 }
 
@@ -512,8 +534,10 @@ export default function PatientHistoryPage() {
 
   const filteredHistory = useMemo(() => {
     return history.filter((item) => {
+      const currentStatus = getHistoryStatus(item);
+
       const matchStatus =
-        statusFilter === "ALL" || normalizeStatus(item.status) === statusFilter;
+        statusFilter === "ALL" || normalizeStatus(currentStatus) === statusFilter;
 
       const query = searchQuery.toLowerCase().trim();
       const matchSearch =
@@ -651,7 +675,7 @@ export default function PatientHistoryPage() {
                 <span className="flex items-center gap-3">
                   <CalendarIcon className="h-6 w-6 text-slate-500" />
                   <span className="font-semibold text-[#0b2740]">
-                    May 14 - May 18, 2025
+                    All dates
                   </span>
                 </span>
                 <ChevronDown className="h-5 w-5 text-slate-500" />
@@ -721,7 +745,7 @@ export default function PatientHistoryPage() {
                         </h2>
                         <p className="mt-2 flex items-center gap-2 text-slate-500">
                           <PillIcon className="h-5 w-5" />
-                          {item.dose || "-"}
+                          {item.dose || item.schedule?.dose || "-"}
                         </p>
 
                         <div className="mt-5 grid gap-3 text-[#0b2740] sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -737,7 +761,7 @@ export default function PatientHistoryPage() {
                       </div>
 
                       <div className="flex lg:justify-center">
-                        <StatusBadge status={item.status} />
+                        <StatusBadge status={getHistoryStatus(item)} />
                       </div>
 
                       <div>
@@ -754,18 +778,16 @@ export default function PatientHistoryPage() {
                           <ChevronDown className="h-5 w-5 shrink-0 text-slate-500" />
                         </div>
 
-                        {normalizeStatus(item.status) === "REJECTED" && (
-                          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                            <p className="flex items-center gap-2 font-bold">
-                              <XCircleIcon className="h-5 w-5" />
-                              Doctor&apos;s Reason
-                            </p>
-                            <p className="mt-2">
-                              {item.rejection_reason ||
-                                "Photo is unclear, medicine not visible."}
-                            </p>
-                          </div>
-                        )}
+                        {normalizeStatus(getHistoryStatus(item)) === "REJECTED" &&
+                          item.rejection_reason && (
+                            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                              <p className="flex items-center gap-2 font-bold">
+                                <XCircleIcon className="h-5 w-5" />
+                                Doctor&apos;s Reason
+                              </p>
+                              <p className="mt-2">{item.rejection_reason}</p>
+                            </div>
+                          )}
 
                         {index === filteredHistory.length - 1 && (
                           <div className="hidden" />
@@ -776,13 +798,6 @@ export default function PatientHistoryPage() {
                 ))
               )}
             </section>
-
-            <div className="mt-8 flex justify-center">
-              <button className="flex h-12 min-w-[260px] items-center justify-center gap-3 rounded-full border border-slate-300 bg-white px-8 text-sm font-bold text-[#0b2740] shadow-sm hover:bg-slate-50">
-                Load more
-                <ChevronDown className="h-5 w-5" />
-              </button>
-            </div>
           </div>
         </section>
 

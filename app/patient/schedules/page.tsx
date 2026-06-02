@@ -12,11 +12,17 @@ type ScheduleItem = {
   dose?: string;
   status?: string;
   instruction?: string;
+
   medicine?: { name?: string };
   medication?: { name?: string };
   medicine_name?: string;
   medication_name?: string;
   name?: string;
+
+  proof_image?: string;
+  verification_status?: string;
+  consumption_id?: string;
+  rejection_reason?: string | null;
 };
 
 const TODAY_SCHEDULES_ENDPOINT = "/patient/schedules/today";
