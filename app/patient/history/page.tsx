@@ -84,6 +84,14 @@ function getMedicineName(item: HistoryItem) {
   );
 }
 
+function getSafeFileName(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function getHistoryStatus(item: HistoryItem) {
   return item.verification_status || item.status || "WAITING_VERIFICATION";
 }
@@ -135,6 +143,10 @@ function statusLabel(status?: string) {
   const normalized = normalizeStatus(status);
 
   if (normalized === "WAITING_VERIFICATION") return "Waiting Verification";
+  if (normalized === "APPROVED") return "Approved";
+  if (normalized === "REJECTED") return "Rejected";
+  if (normalized === "MISSED") return "Missed";
+  if (normalized === "PENDING") return "Pending";
 
   return normalized.charAt(0) + normalized.slice(1).toLowerCase();
 }
@@ -549,6 +561,160 @@ export default function PatientHistoryPage() {
     });
   }, [history, statusFilter, searchQuery]);
 
+  async function handleDownloadPdf() {
+    if (filteredHistory.length === 0) {
+      alert("Tidak ada data history untuk diexport.");
+      return;
+    }
+
+    const { default: jsPDF } = await import("jspdf");
+    const autoTableModule = await import("jspdf-autotable");
+    const autoTable = autoTableModule.default;
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const exportedAt = new Date();
+
+    const patientName =
+      currentUser?.username || currentUser?.email || "Patient";
+
+    const safePatientName = getSafeFileName(patientName) || "patient";
+
+    const totalRecords = filteredHistory.length;
+
+    const approvedCount = filteredHistory.filter(
+      (item) => normalizeStatus(getHistoryStatus(item)) === "APPROVED"
+    ).length;
+
+    const waitingCount = filteredHistory.filter(
+      (item) =>
+        normalizeStatus(getHistoryStatus(item)) === "WAITING_VERIFICATION"
+    ).length;
+
+    const rejectedCount = filteredHistory.filter(
+      (item) => normalizeStatus(getHistoryStatus(item)) === "REJECTED"
+    ).length;
+
+    const missedCount = filteredHistory.filter(
+      (item) => normalizeStatus(getHistoryStatus(item)) === "MISSED"
+    ).length;
+
+    doc.setFontSize(18);
+    doc.text("Adherify Medication Consumption Report", 14, 18);
+
+    doc.setFontSize(10);
+    doc.text(`Patient: ${patientName}`, 14, 27);
+    doc.text(
+      `Exported at: ${new Intl.DateTimeFormat("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(exportedAt)}`,
+      14,
+      33
+    );
+
+    doc.setFontSize(11);
+    doc.text("Summary", 14, 44);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [["Total", "Approved", "Waiting Verification", "Rejected", "Missed"]],
+      body: [[
+        String(totalRecords),
+        String(approvedCount),
+        String(waitingCount),
+        String(rejectedCount),
+        String(missedCount),
+      ]],
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [7, 50, 74],
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+    });
+
+    const tableRows = filteredHistory.map((item, index) => {
+      const status = normalizeStatus(getHistoryStatus(item));
+      const proofUrl = getProofImageUrl(item.proof_image || item.proofImage);
+
+      return [
+        String(index + 1),
+        getMedicineName(item),
+        item.dose || item.schedule?.dose || "-",
+        getHistoryDate(item),
+        getHistoryTime(item),
+        statusLabel(status),
+        item.rejection_reason || "-",
+        proofUrl ? "Available in app" : "-",
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 72,
+      head: [[
+        "No",
+        "Medication",
+        "Dose",
+        "Date",
+        "Time",
+        "Status",
+        "Rejection Reason",
+        "Proof",
+      ]],
+      body: tableRows,
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [7, 50, 74],
+      },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 48 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 35 },
+        6: { cellWidth: 55 },
+        7: { cellWidth: 30 },
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+    });
+
+    const finalY =
+      (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+        ?.finalY || 180;
+
+    doc.setFontSize(8);
+    doc.text(
+      "Note: Proof images are stored securely and can be viewed from the Adherify application.",
+      14,
+      finalY + 10
+    );
+
+    const fileDate = exportedAt.toISOString().slice(0, 10);
+
+    doc.save(`adherify-history-${safePatientName}-${fileDate}.pdf`);
+  }
+
   const sidebarWidthClass = isSidebarCollapsed ? "xl:ml-[96px]" : "xl:ml-[272px]";
   const sidebarBaseWidthClass = isSidebarCollapsed ? "w-[96px]" : "w-[272px]";
 
@@ -655,20 +821,25 @@ export default function PatientHistoryPage() {
               </div>
             </header>
 
-            <section className="mb-6">
-              <h1 className="text-[34px] font-bold leading-none tracking-tight text-[#151821] md:text-[42px]">
-                Consumption History
-              </h1>
-              <p className="mt-3 text-base text-slate-500 md:text-lg">
-                Review your past medication consumption and verification status.
-              </p>
-            </section>
-
-            {apiError && (
-              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                Riwayat belum bisa dimuat: {apiError}
+            <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h1 className="text-[34px] font-bold leading-none tracking-tight text-[#151821] md:text-[42px]">
+                  Medication History
+                </h1>
+                <p className="mt-3 text-base text-slate-500 md:text-lg">
+                  Track your medication consumption history.
+                </p>
               </div>
-            )}
+
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={filteredHistory.length === 0}
+                className="flex h-12 w-full items-center justify-center rounded-2xl bg-[#07324a] px-6 text-sm font-bold text-white transition hover:bg-[#062a3e] disabled:cursor-not-allowed disabled:opacity-50 md:w-fit"
+              >
+                Download PDF
+              </button>
+            </section>
 
             <section className="mb-6 grid gap-4 xl:grid-cols-[0.9fr_1.45fr]">
               <button className="flex h-14 items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 text-left shadow-sm">
