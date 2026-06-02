@@ -94,6 +94,7 @@ export default function SignUpPage() {
                             username,
                             email,
                             password,
+                            role,
                             doctorId: selectedDoctorId,
                         }),
                     });
