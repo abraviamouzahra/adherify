@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
 type Role = "DOCTOR" | "PATIENT";
+
+type DoctorOption = {
+    id: string;
+    username?: string;
+    email?: string;
+};
+
+const AUTH_ENDPOINTS = {
+    getDoctors: "/auth/doctors",
+    registerDoctor: "/auth/register",
+    registerPatientWithDoctor: "/auth/register",
+    registerPatientWithoutDoctor: "/auth/register",
+};
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -13,10 +26,45 @@ export default function SignUpPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [role, setRole] = useState<Role>("DOCTOR");
+
+    const [doctors, setDoctors] = useState<DoctorOption[]>([]);
+    const [selectedDoctorId, setSelectedDoctorId] = useState("");
+    const [connectWithDoctor, setConnectWithDoctor] = useState(false);
+    const [loadingDoctors, setLoadingDoctors] = useState(false);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
+
+    useEffect(() => {
+        async function fetchDoctors() {
+            try {
+                setLoadingDoctors(true);
+
+                const data = await apiFetch(AUTH_ENDPOINTS.getDoctors, {
+                    method: "GET",
+                });
+
+                const list = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data?.data)
+                        ? data.data
+                        : Array.isArray(data?.doctors)
+                            ? data.doctors
+                            : [];
+
+                setDoctors(list);
+            } catch (err) {
+                console.log("Failed to fetch doctors:", err);
+                setDoctors([]);
+            } finally {
+                setLoadingDoctors(false);
+            }
+        }
+
+        fetchDoctors();
+    }, []);
 
     async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -24,15 +72,42 @@ export default function SignUpPage() {
         setError("");
 
         try {
-            await apiFetch("/auth/register", {
-                method: "POST",
-                body: JSON.stringify({
-                    username,
-                    email,
-                    password,
-                    role,
-                }),
-            });
+            if (role === "DOCTOR") {
+                await apiFetch(AUTH_ENDPOINTS.registerDoctor, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password,
+                        role,
+                    }),
+                });
+            }
+
+            if (role === "PATIENT") {
+                const shouldAssignDoctor = connectWithDoctor && selectedDoctorId;
+
+                if (shouldAssignDoctor) {
+                    await apiFetch(AUTH_ENDPOINTS.registerPatientWithDoctor, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            username,
+                            email,
+                            password,
+                            doctorId: selectedDoctorId,
+                        }),
+                    });
+                } else {
+                    await apiFetch(AUTH_ENDPOINTS.registerPatientWithoutDoctor, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            username,
+                            email,
+                            password,
+                        }),
+                    });
+                }
+            }
 
             setRegisteredEmail(email);
             setIsEmailSent(true);
@@ -206,6 +281,64 @@ export default function SignUpPage() {
                                     className="h-[54px] w-full rounded-[10px] border border-slate-300 bg-slate-50 px-4 text-[16px] text-slate-900 outline-none placeholder:text-slate-500 focus:border-[#07324a] focus:bg-white sm:h-[58px] sm:text-[18px] xl:h-[46px] xl:rounded-[7px] xl:text-[14px]"
                                 />
                             </div>
+
+                            {role === "PATIENT" && (
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <label className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={connectWithDoctor}
+                                            onChange={(e) => {
+                                                setConnectWithDoctor(e.target.checked);
+
+                                                if (!e.target.checked) {
+                                                    setSelectedDoctorId("");
+                                                }
+                                            }}
+                                            className="mt-1 h-4 w-4"
+                                        />
+
+                                        <span>
+                                            <span className="block text-sm font-semibold text-[#0b2740]">
+                                                Connect with a doctor now
+                                            </span>
+                                            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                                Choose this if your account should be linked to a doctor after registration.
+                                            </span>
+                                        </span>
+                                    </label>
+
+                                    {connectWithDoctor && (
+                                        <div className="mt-4">
+                                            <label className="mb-2 block text-sm font-semibold text-[#0b2740]">
+                                                Choose doctor
+                                            </label>
+
+                                            <select
+                                                value={selectedDoctorId}
+                                                onChange={(e) => setSelectedDoctorId(e.target.value)}
+                                                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-[#0b2740] outline-none focus:border-[#07324a]"
+                                            >
+                                                <option value="">
+                                                    {loadingDoctors ? "Loading doctors..." : "Select doctor"}
+                                                </option>
+
+                                                {doctors.map((doctor) => (
+                                                    <option key={doctor.id} value={doctor.id}>
+                                                        {doctor.username || doctor.email || doctor.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            {!loadingDoctors && doctors.length === 0 && (
+                                                <p className="mt-2 text-xs text-amber-600">
+                                                    Doctor list is unavailable. You can register without assigning a doctor.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {error && (
                                 <div className="rounded-[8px] bg-red-50 px-4 py-3 text-[13px] text-red-600 sm:text-[15px] xl:text-[13px]">
