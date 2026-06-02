@@ -79,7 +79,6 @@ export default function SignUpPage() {
                         username,
                         email,
                         password,
-                        role,
                     }),
                 });
             }
@@ -94,7 +93,6 @@ export default function SignUpPage() {
                             username,
                             email,
                             password,
-                            role,
                             doctorId: selectedDoctorId,
                         }),
                     });
