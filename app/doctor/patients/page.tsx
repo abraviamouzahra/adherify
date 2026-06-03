@@ -698,28 +698,28 @@ export default function DoctorPatientsPage() {
                                 icon={<UserIcon className="h-7 w-7" />}
                                 title="Total Patients"
                                 value={totalPatients}
-                                subtitle="+8 this week"
+                                subtitle=" "
                                 tone="blue"
                             />
                             <StatCard
                                 icon={<CheckIcon className="h-7 w-7" />}
                                 title="Active Patients"
                                 value={activePatients}
-                                subtitle="Currently monitored"
+                                subtitle=" "
                                 tone="green"
                             />
                             <StatCard
                                 icon={<ClockIcon className="h-7 w-7" />}
                                 title="Waiting Verification"
                                 value={waitingPatients}
-                                subtitle="Needs review"
+                                subtitle=" "
                                 tone="yellow"
                             />
                             <StatCard
                                 icon={<XIcon className="h-7 w-7" />}
                                 title="Rejected Patients"
                                 value={rejectedPatients}
-                                subtitle="Need follow up"
+                                subtitle=" "
                                 tone="red"
                             />
                         </section>
