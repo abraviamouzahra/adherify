@@ -699,9 +699,6 @@ export default function DoctorMedicationsPage() {
 
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
-                              <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-blue-600 hover:bg-blue-50">
-                                <EyeIcon className="h-4 w-4" />
-                              </button>
                               <button
                                 onClick={() => openEditModal(medication)}
                                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-blue-600 hover:bg-blue-50"
@@ -930,10 +927,6 @@ export default function DoctorMedicationsPage() {
                   </div>
                 )}
 
-                <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-[#0b2740]">
-                  Frontend hanya mengirim field yang diterima backend:{" "}
-                  <span className="font-bold">name, slot_number, stock</span>.
-                </div>
 
                 <div className="flex flex-col-reverse gap-3 pt-2 md:flex-row md:justify-end">
                   <button
