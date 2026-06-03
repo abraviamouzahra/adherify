@@ -1,4 +1,3 @@
-"DASHBOARD PAGE FOR PATIENT ROLE"
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -12,13 +11,17 @@ type ScheduleItem = {
   time?: string;
   dose?: string;
   status?: string;
+  verification_status?: string;
   instruction?: string;
+
   medicine?: {
     name?: string;
   };
+
   medication?: {
     name?: string;
   };
+
   medicine_name?: string;
   medication_name?: string;
   name?: string;
@@ -82,8 +85,12 @@ function statusStyle(status?: string) {
   return "bg-slate-100 text-slate-600";
 }
 
+function getScheduleStatus(item?: ScheduleItem) {
+  return item?.verification_status || item?.status;
+}
+
 function countByStatus(schedules: ScheduleItem[], target: string) {
-  return schedules.filter((item) => normalizeStatus(item.status) === target)
+  return schedules.filter((item) => normalizeStatus(getScheduleStatus(item)) === target)
     .length;
 }
 
@@ -341,7 +348,6 @@ export default function PatientDashboardPage() {
     }
 
     fetchDashboardData();
-    fetchDashboardData();
     fetchCurrentUser();
   }, []);
 
@@ -385,6 +391,94 @@ export default function PatientDashboardPage() {
     () => countByStatus(schedules, "MISSED"),
     [schedules]
   );
+
+  const totalTodaySchedules = schedules.length;
+
+  const pendingCount = useMemo(
+    () =>
+      schedules.filter((item) => {
+        const status = normalizeStatus(getScheduleStatus(item));
+
+        return (
+          status === "PENDING" ||
+          status === "SCHEDULED" ||
+          status === "UPCOMING"
+        );
+      }).length,
+    [schedules]
+  );
+
+  const latestStatusData =
+    loading
+      ? {
+        title: "Checking your schedule...",
+        description: "We are loading your medication summary for today.",
+        summaryLabel: "Today's summary",
+        summaryValue: "Loading data...",
+        tone: "blue",
+      }
+      : totalTodaySchedules === 0
+        ? {
+          title: "No schedules today",
+          description: "You do not have any medication schedules for today.",
+          summaryLabel: "Today's summary",
+          summaryValue: "No schedules for today",
+          tone: "blue",
+        }
+        : missedCount > 0
+          ? {
+            title: "Needs attention",
+            description: "Some medication schedules were missed today.",
+            summaryLabel: "Today's summary",
+            summaryValue: `${missedCount} missed schedule${missedCount > 1 ? "s" : ""
+              }`,
+            tone: "red",
+          }
+          : rejectedCount > 0
+            ? {
+              title: "Proof needs revision",
+              description: "Some submitted proof was rejected by your doctor.",
+              summaryLabel: "Today's summary",
+              summaryValue: `${rejectedCount} rejected proof${rejectedCount > 1 ? "s" : ""
+                }`,
+              tone: "red",
+            }
+            : waitingCount > 0
+              ? {
+                title: "Waiting for verification",
+                description: "Your submitted proof is waiting for doctor review.",
+                summaryLabel: "Today's summary",
+                summaryValue: `${waitingCount} proof${waitingCount > 1 ? "s are" : " is"
+                  } under review`,
+                tone: "amber",
+              }
+              : pendingCount > 0
+                ? {
+                  title: "Upcoming medication",
+                  description:
+                    "You still have medication schedules to complete today.",
+                  summaryLabel: "Today's summary",
+                  summaryValue: `${pendingCount} schedule${pendingCount > 1 ? "s" : ""
+                    } remaining`,
+                  tone: "blue",
+                }
+                : {
+                  title: "All good!",
+                  description: "Your medication schedule is on track for today.",
+                  summaryLabel: "Today's summary",
+                  summaryValue: `${approvedCount} of ${totalTodaySchedules} schedule${totalTodaySchedules > 1 ? "s" : ""
+                    } completed`,
+                  tone: "green",
+                };
+
+  const latestStatusIconClass =
+    latestStatusData.tone === "green"
+      ? "bg-green-50 text-green-600"
+      : latestStatusData.tone === "amber"
+        ? "bg-amber-50 text-amber-600"
+        : latestStatusData.tone === "red"
+          ? "bg-red-50 text-red-600"
+          : "bg-blue-50 text-blue-600";
 
   function handleLogout() {
     logout();
@@ -546,7 +640,7 @@ export default function PatientDashboardPage() {
                         )}`}
                       >
                         <span className="h-2 w-2 rounded-full bg-current" />
-                        {statusLabel(nextMedication?.status)}
+                        {statusLabel(getScheduleStatus(nextMedication))}
                       </span>
                     </div>
 
@@ -581,16 +675,22 @@ export default function PatientDashboardPage() {
                 </p>
 
                 <div className="mt-6 flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-600">
-                    <CheckIcon className="h-8 w-8" />
+                  <div
+                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${latestStatusIconClass}`}
+                  >
+                    {latestStatusData.tone === "green" ? (
+                      <CheckIcon className="h-8 w-8" />
+                    ) : (
+                      <ClockIcon className="h-8 w-8" />
+                    )}
                   </div>
 
                   <div>
                     <h3 className="text-[18px] font-bold text-[#0b2740] md:text-[20px]">
-                      All good!
+                      {latestStatusData.title}
                     </h3>
                     <p className="mt-2 text-[15px] leading-7 text-slate-500">
-                      You&apos;re on track with your medication plan. Keep it up!
+                      {latestStatusData.description}
                     </p>
                   </div>
                 </div>
@@ -598,11 +698,16 @@ export default function PatientDashboardPage() {
                 <div className="my-6 h-px bg-slate-200" />
 
                 <div className="flex items-center gap-3">
-                  <ClockIcon className="h-6 w-6 text-slate-500" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                    <ClockIcon className="h-5 w-5" />
+                  </div>
+
                   <div>
-                    <p className="text-sm text-slate-500">Last updated</p>
+                    <p className="text-sm text-slate-500">
+                      {latestStatusData.summaryLabel}
+                    </p>
                     <p className="font-semibold text-[#0b2740]">
-                      Today, 07:15 AM
+                      {latestStatusData.summaryValue}
                     </p>
                   </div>
                 </div>
