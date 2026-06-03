@@ -59,6 +59,7 @@ type ScheduleForm = {
 const SCHEDULES_ENDPOINT = "/schedules";
 const PATIENTS_ENDPOINT = "/patients";
 const MEDICATIONS_ENDPOINT = "/medications";
+const SCHEDULES_EXPORT_ENDPOINT = "/schedules/export";
 
 
 const emptyForm: ScheduleForm = {
@@ -167,6 +168,28 @@ function formatTime(time?: string) {
     const displayHour = hour % 12 || 12;
 
     return `${String(displayHour).padStart(2, "0")}:${minute} ${suffix}`;
+}
+
+function getExcelFileName(response: Response) {
+    const contentDisposition = response.headers.get("Content-Disposition");
+
+    if (!contentDisposition) {
+        const today = new Date().toISOString().slice(0, 10);
+        return `jadwal_obat_${today}.xlsx`;
+    }
+
+    const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+    if (filenameStarMatch?.[1]) {
+        return decodeURIComponent(filenameStarMatch[1]);
+    }
+
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (filenameMatch?.[1]) {
+        return filenameMatch[1];
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    return `jadwal_obat_${today}.xlsx`;
 }
 
 function DashboardIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -408,6 +431,10 @@ export default function DoctorSchedulesPage() {
     const [patientFilter, setPatientFilter] = useState("ALL");
     const [statusFilter, setStatusFilter] = useState("ALL");
 
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [exportingExcel, setExportingExcel] = useState(false);
+
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
     const [form, setForm] = useState<ScheduleForm>(emptyForm);
@@ -623,6 +650,81 @@ export default function DoctorSchedulesPage() {
         }
     }
 
+    async function handleExportExcel() {
+        try {
+            setExportingExcel(true);
+
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                throw new Error("Token tidak ditemukan. Silakan login ulang.");
+            }
+
+            if (fromDate && toDate && fromDate > toDate) {
+                throw new Error("Tanggal awal tidak boleh lebih besar dari tanggal akhir.");
+            }   
+
+            const params = new URLSearchParams();
+
+            if (statusFilter !== "ALL") {
+                params.set("status", statusFilter);
+            }
+
+            if (fromDate) {
+                params.set("from", fromDate);
+            }
+
+            if (toDate) {
+                params.set("to", toDate);
+            }
+
+            if (patientFilter !== "ALL") {
+                const selectedPatient = patients.find((patient) => {
+                    const patientName = patient.full_name || patient.name || "Patient";
+                    return patientName === patientFilter;
+                });
+
+                if (selectedPatient?.id) {
+                    params.set("patientId", selectedPatient.id);
+                }
+            }
+
+            const queryString = params.toString();
+
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}${SCHEDULES_EXPORT_ENDPOINT}${queryString ? `?${queryString}` : ""}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => "");
+                throw new Error(errorText || "Gagal export Excel.");
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = getExcelFileName(response);
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Gagal export Excel.");
+        } finally {
+            setExportingExcel(false);
+        }
+    }
+
     return (
         <ProtectedPage allowedRole="DOCTOR">
             <main className="min-h-screen bg-[#f8fbff] text-[#0b2740]">
@@ -741,13 +843,26 @@ export default function DoctorSchedulesPage() {
                                 </p>
                             </div>
 
-                            <button
-                                onClick={openCreateForm}
-                                className="flex h-[52px] w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-6 text-sm font-bold text-white shadow-sm hover:bg-blue-700 md:w-fit"
-                            >
-                                <CalendarIcon className="h-5 w-5" />
-                                Create Schedule
-                            </button>
+                            <div className="flex w-full flex-col gap-3 md:w-fit md:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={handleExportExcel}
+                                    disabled={exportingExcel}
+                                    className="flex h-[52px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-bold text-[#0b2740] shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
+                                >
+                                    <UploadIcon className="h-5 w-5" />
+                                    {exportingExcel ? "Exporting..." : "Export Excel"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={openCreateForm}
+                                    className="flex h-[52px] w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-6 text-sm font-bold text-white shadow-sm hover:bg-blue-700 md:w-fit"
+                                >
+                                    <CalendarIcon className="h-5 w-5" />
+                                    Create Schedule
+                                </button>
+                            </div>
                         </section>
 
                         {apiError && (
@@ -756,7 +871,7 @@ export default function DoctorSchedulesPage() {
                             </div>
                         )}
 
-                        <section className="mb-6 grid gap-4 xl:grid-cols-[1fr_0.8fr_0.8fr_0.7fr]">
+                        <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.2fr_0.85fr_0.75fr_0.65fr_0.65fr_0.55fr]">
                             <div className="relative">
                                 <SearchIcon className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
                                 <input
@@ -798,6 +913,26 @@ export default function DoctorSchedulesPage() {
                                     <option value="MISSED">Missed</option>
                                 </select>
                                 <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                            </div>
+
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-[#0b2740] outline-none focus:border-[#07324a]"
+                                    title="From date"
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-[#0b2740] outline-none focus:border-[#07324a]"
+                                    title="To date"
+                                />
                             </div>
 
                             <button
