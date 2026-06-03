@@ -9,12 +9,16 @@ import { logout } from "@/lib/auth";
 type Patient = {
     id: string;
     user_id?: string;
+    assigned_doctor_id?: string;
 
     full_name?: string;
     name?: string;
-
     email?: string;
+
     age?: number;
+    birth_date?: string;
+    gender?: string;
+    address?: string;
 
     main_disease?: string;
     disease_note?: string;
@@ -22,17 +26,13 @@ type Patient = {
     whatsapp_number?: string;
     phone?: string;
 
-    birth_date?: string;
-    gender?: string;
-    address?: string;
     latest_status?: string;
-
-    created_at?: string;
     deleted_at?: string | null;
 
     user?: {
         id?: string;
         email?: string;
+        username?: string;
         role?: string;
         created_at?: string;
     };
@@ -95,20 +95,51 @@ type TabKey = "profile" | "medications" | "schedules" | "history";
 const PATIENTS_ENDPOINT = "/patients";
 
 function getPatientName(patient?: Patient | null) {
-    return patient?.full_name || patient?.name || "Patient";
+    if (!patient) return "Patient";
+
+    return (
+        patient.full_name?.trim() ||
+        patient.name?.trim() ||
+        patient.user?.username?.trim() ||
+        patient.user?.email?.split("@")[0] ||
+        patient.email?.split("@")[0] ||
+        "Patient"
+    );
 }
 
 function getPatientEmail(patient?: Patient | null) {
-    return patient?.user?.email || patient?.email || "-";
+    return patient?.user?.email || patient?.email || "Not set";
+}
+
+function getPatientAge(patient?: Patient | null) {
+    if (!patient?.age || patient.age <= 0) return "Not set";
+    return `${patient.age} years`;
 }
 
 function getPatientDisease(patient?: Patient | null) {
-    return patient?.main_disease || patient?.disease_note || "-";
+    return (
+        patient?.main_disease?.trim() ||
+        patient?.disease_note?.trim() ||
+        "Not set"
+    );
+}
+
+function getPatientWhatsapp(patient?: Patient | null) {
+    return (
+        patient?.whatsapp_number?.trim() ||
+        patient?.phone?.trim() ||
+        "Not set"
+    );
+}
+
+function getOptionalPatientField(value?: string | null) {
+    return value?.trim() || "Not set";
 }
 
 function getInitials(name: string) {
     return name
         .split(" ")
+        .filter(Boolean)
         .map((word) => word[0])
         .join("")
         .slice(0, 2)
@@ -122,7 +153,10 @@ function normalizeStatus(status?: string) {
 
 function statusLabel(status?: string) {
     const normalized = normalizeStatus(status);
+
     if (normalized === "WAITING_VERIFICATION") return "Waiting Verification";
+    if (normalized === "PENDING") return "Pending Setup";
+
     return normalized.charAt(0) + normalized.slice(1).toLowerCase();
 }
 
@@ -423,25 +457,14 @@ export default function DoctorPatientDetailPage() {
 
     const currentPatient = patient;
 
-    const patientName = currentPatient
-        ? getPatientName(currentPatient)
-        : "Patient";
-
-    const patientEmail = currentPatient
-        ? getPatientEmail(currentPatient)
-        : "-";
-
-    const patientDisease = currentPatient
-        ? getPatientDisease(currentPatient)
-        : "-";
-
-    const patientPhone =
-        currentPatient?.whatsapp_number || currentPatient?.phone || "-";
-
-    const patientBirthDate = currentPatient?.birth_date || "-";
-    const patientGender = currentPatient?.gender || "-";
-    const patientAddress = currentPatient?.address || "-";
-    const patientStatus = currentPatient?.latest_status || "-";
+    const patientName = getPatientName(currentPatient);
+    const patientEmail = getPatientEmail(currentPatient);
+    const patientDisease = getPatientDisease(currentPatient);
+    const patientPhone = getPatientWhatsapp(currentPatient);
+    const patientAge = getPatientAge(currentPatient);
+    const patientGender = getOptionalPatientField(currentPatient?.gender);
+    const patientAddress = getOptionalPatientField(currentPatient?.address);
+    const patientStatus = currentPatient?.latest_status || "PENDING";
 
     const sidebarWidthClass = isSidebarCollapsed ? "xl:ml-[96px]" : "xl:ml-[272px]";
     const sidebarBaseWidthClass = isSidebarCollapsed ? "w-[96px]" : "w-[272px]";
@@ -464,7 +487,12 @@ export default function DoctorPatientDetailPage() {
                 let patientSchedules: Schedule[] = [];
 
                 if (patientRes.status === "fulfilled") {
-                    selectedPatient = patientRes.value?.data || patientRes.value;
+                    selectedPatient =
+                        patientRes.value?.data?.patient ||
+                        patientRes.value?.patient ||
+                        patientRes.value?.data ||
+                        patientRes.value;
+
                     setPatient(selectedPatient);
                 } else {
                     setPatient(null);
@@ -563,19 +591,36 @@ export default function DoctorPatientDetailPage() {
     const displayedHistory = history;
 
     const approvedCount = useMemo(
-        () => displayedHistory.filter((item) => normalizeStatus(item.status) === "APPROVED").length || 18,
+        () =>
+            displayedHistory.filter(
+                (item) => normalizeStatus(item.verification_status || item.status) === "APPROVED"
+            ).length,
         [displayedHistory]
     );
+
     const rejectedCount = useMemo(
-        () => displayedHistory.filter((item) => normalizeStatus(item.status) === "REJECTED").length || 2,
+        () =>
+            displayedHistory.filter(
+                (item) => normalizeStatus(item.verification_status || item.status) === "REJECTED"
+            ).length,
         [displayedHistory]
     );
+
     const missedCount = useMemo(
-        () => displayedHistory.filter((item) => normalizeStatus(item.status) === "MISSED").length || 1,
+        () =>
+            displayedHistory.filter(
+                (item) => normalizeStatus(item.verification_status || item.status) === "MISSED"
+            ).length,
         [displayedHistory]
     );
+
     const waitingCount = useMemo(
-        () => displayedHistory.filter((item) => normalizeStatus(item.status) === "WAITING_VERIFICATION").length || 3,
+        () =>
+            displayedHistory.filter(
+                (item) =>
+                    normalizeStatus(item.verification_status || item.status) ===
+                    "WAITING_VERIFICATION"
+            ).length,
         [displayedHistory]
     );
 
@@ -741,21 +786,20 @@ export default function DoctorPatientDetailPage() {
                                             <div>
                                                 <p className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                                                     <CalendarIcon className="h-5 w-5" />
-                                                    Date of Birth
+                                                    Age
                                                 </p>
                                                 <p className="mt-2 font-bold text-[#0b2740]">
-                                                    {patientBirthDate}
-                                                    {currentPatient?.age ? ` (${currentPatient.age} y.o)` : ""}
+                                                    {patientAge}
                                                 </p>
                                             </div>
 
                                             <div>
                                                 <p className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                                                     <UserIcon className="h-5 w-5" />
-                                                    Gender
+                                                    WhatsApp
                                                 </p>
                                                 <p className="mt-2 font-bold text-[#0b2740]">
-                                                    {patientGender}
+                                                    {patientPhone}
                                                 </p>
                                             </div>
 
@@ -884,11 +928,10 @@ export default function DoctorPatientDetailPage() {
                                             <div className="space-y-4 text-sm">
                                                 <InfoRow label="Full Name" value={patientName} />
                                                 <InfoRow label="Email" value={patientEmail} />
-                                                <InfoRow label="Phone" value={patientPhone} />
-                                                <InfoRow label="Date of Birth" value={patientBirthDate} />
-                                                <InfoRow label="Gender" value={patientGender} />
-                                                <InfoRow label="Address" value={patientAddress} />
-                                                <InfoRow label="Disease / Notes" value={patientDisease} />
+                                                <InfoRow label="WhatsApp" value={patientPhone} />
+                                                <InfoRow label="Age" value={patientAge} />
+                                                <InfoRow label="Main Disease" value={patientDisease} />
+                                                <InfoRow label="Patient Status" value={statusLabel(patientStatus)} />
                                             </div>
                                         </div>
 
