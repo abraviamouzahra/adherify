@@ -77,10 +77,16 @@ function normalizeStatus(status?: string) {
     return status.toUpperCase();
 }
 
+function getPatientStatus(patient: Patient) {
+    return patient.latest_status || "PENDING";
+}
+
 function statusLabel(status?: string) {
     const normalized = normalizeStatus(status);
 
     if (normalized === "WAITING_VERIFICATION") return "Waiting Verification";
+    if (normalized === "PENDING") return "Pending Setup";
+
     return normalized.charAt(0) + normalized.slice(1).toLowerCase();
 }
 
@@ -362,7 +368,7 @@ export default function DoctorPatientsPage() {
 
             const matchStatus =
                 statusFilter === "ALL" ||
-                normalizeStatus(patient.latest_status) === statusFilter;
+                normalizeStatus(getPatientStatus(patient)) === statusFilter;
 
             return matchSearch && matchStatus;
         });
@@ -370,13 +376,14 @@ export default function DoctorPatientsPage() {
 
     const totalPatients = patients.length;
     const activePatients = patients.filter(
-        (p) => normalizeStatus(p.latest_status) === "APPROVED"
+        (p) => normalizeStatus(getPatientStatus(p)) === "APPROVED"
     ).length;
     const waitingPatients = patients.filter(
-        (p) => normalizeStatus(p.latest_status) === "WAITING_VERIFICATION"
+        (p) => normalizeStatus(getPatientStatus(p)) === "WAITING_VERIFICATION"
     ).length;
+
     const rejectedPatients = patients.filter(
-        (p) => normalizeStatus(p.latest_status) === "REJECTED"
+        (p) => normalizeStatus(getPatientStatus(p)) === "REJECTED"
     ).length;
 
     const sidebarWidthClass = isSidebarCollapsed ? "xl:ml-[96px]" : "xl:ml-[272px]";
@@ -617,7 +624,7 @@ export default function DoctorPatientsPage() {
                             </div>
 
                             <div className="ml-auto flex items-center gap-4">
-        
+
 
                                 <div className="flex items-center gap-3">
                                     {/* DOCTOR IMAGE PLACEHOLDER */}
@@ -653,7 +660,7 @@ export default function DoctorPatientsPage() {
 
                         {apiError && (
                             <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                                API pasien belum terbaca: {apiError}. Untuk sementara memakai data contoh.
+                                API pasien belum terbaca: {apiError}. Silakan refresh halaman atau cek koneksi backend.
                             </div>
                         )}
 
@@ -792,7 +799,7 @@ export default function DoctorPatientsPage() {
                                                         </td>
 
                                                         <td className="px-5 py-4">
-                                                            <StatusBadge status={patient.latest_status || "APPROVED"} />
+                                                            <StatusBadge status={getPatientStatus(patient)} />
                                                         </td>
 
                                                         <td className="px-5 py-4">
@@ -863,7 +870,7 @@ export default function DoctorPatientsPage() {
                                                         </div>
                                                     </div>
 
-                                                    <StatusBadge status={patient.latest_status || "APPROVED"} />
+                                                    <StatusBadge status={getPatientStatus(patient)} />
                                                 </div>
 
                                                 <div className="mt-5 grid grid-cols-3 gap-3">
