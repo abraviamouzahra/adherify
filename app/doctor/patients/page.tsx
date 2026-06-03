@@ -617,10 +617,7 @@ export default function DoctorPatientsPage() {
                             </div>
 
                             <div className="ml-auto flex items-center gap-4">
-                                <button className="relative text-slate-500">
-                                    <BellIcon className="h-6 w-6" />
-                                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-blue-500" />
-                                </button>
+        
 
                                 <div className="flex items-center gap-3">
                                     {/* DOCTOR IMAGE PLACEHOLDER */}
@@ -628,10 +625,9 @@ export default function DoctorPatientsPage() {
                                         DA
                                     </div>
                                     <div className="hidden md:block">
-                                        <p className="text-sm font-bold text-[#0b2740]">Dr. Andi</p>
-                                        <p className="text-xs text-slate-500">General Practitioner</p>
+                                        <p className="text-sm font-bold text-[#0b2740]">Doctor</p>
+                                        <p className="text-xs text-slate-500">Medical Staff</p>
                                     </div>
-                                    <ChevronRight className="hidden h-4 w-4 rotate-90 text-slate-500 md:block" />
                                 </div>
                             </div>
                         </header>
@@ -1072,7 +1068,7 @@ export default function DoctorPatientsPage() {
                                                     whatsapp_number: e.target.value,
                                                 }))
                                             }
-                                            placeholder="081234567890"
+                                            placeholder="681234567890"
                                             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-[#0b2740] outline-none transition focus:border-[#07324a] focus:ring-4 focus:ring-[#07324a]/10"
                                         />
                                     </div>

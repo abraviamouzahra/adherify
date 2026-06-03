@@ -563,12 +563,17 @@ export default function PatientDashboardPage() {
                     </button>
                   </div>
 
-                  {/* MEDICINE IMAGE PLACEHOLDER */}
+                  {/* MEDICINE IMAGE */}
                   <div className="hidden lg:flex lg:justify-center">
-                    <div className="flex h-[220px] w-[220px] items-center justify-center rounded-full bg-slate-50 text-center text-sm text-slate-400">
-                      medicine image
-                      <br />
-                      placeholder
+                    <div className="relative flex h-[230px] w-[260px] items-center justify-center overflow-hidden rounded-[36px] bg-gradient-to-br from-slate-50 via-white to-blue-50">
+                      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-100/70 blur-xl" />
+                      <div className="absolute bottom-[-28px] left-8 h-24 w-24 rounded-full bg-cyan-100/70 blur-xl" />
+
+                      <img
+                        src="/foto-jam-obat-rmv.png"
+                        alt="Medication reminder illustration"
+                        className="relative z-10 h-[210px] w-auto object-contain drop-shadow-[0_18px_28px_rgba(15,23,42,0.14)]"
+                      />
                     </div>
                   </div>
                 </div>

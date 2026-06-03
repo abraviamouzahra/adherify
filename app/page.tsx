@@ -287,12 +287,14 @@ export default function LandingPage() {
           </div>
 
           <div className="relative z-10 min-h-[420px] md:min-h-[520px] xl:min-h-[560px]">
-            {/* MAIN HERO IMAGE PLACEHOLDER */}
-            <div className="absolute left-0 top-2 hidden w-[78%] rounded-[32px] border border-slate-200 bg-white p-5 shadow-2xl md:block">
-              <div className="flex h-[380px] items-center justify-center rounded-[24px] bg-gradient-to-br from-slate-50 to-blue-50 text-center text-sm font-semibold text-slate-400 xl:h-[430px]">
-                dashboard / verification
-                <br />
-                image placeholder
+            {/* MAIN HERO IMAGE */}
+            <div className="absolute left-0 top-2 hidden w-[78%] overflow-hidden rounded-[32px] border border-slate-200 bg-white p-5 shadow-2xl md:block">
+              <div className="h-[380px] overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-50 to-blue-50 xl:h-[430px]">
+                <img
+                  src="/foto-jam-obat-adherify.png"
+                  alt="Adherify dashboard preview"
+                  className="h-full w-full object-cover"
+                />
               </div>
             </div>
 
@@ -477,10 +479,11 @@ export default function LandingPage() {
           <div>
             {/* LOGO PLACEHOLDER */}
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#07324a] text-[#07324a]">
-                ✓
-              </div>
-              <span className="text-2xl font-bold text-[#07324a]">adherify</span>
+              <img
+                src="/logo-adherify.png"
+                alt="Adherify"
+                className="h-12 w-auto"
+              />
             </div>
             <p className="mt-4 max-w-[520px] text-sm leading-7 text-slate-600">
               Medication adherence platform untuk membantu pasien mengikuti jadwal obat

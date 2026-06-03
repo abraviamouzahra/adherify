@@ -691,10 +691,6 @@ export default function DoctorVerificationsPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-4">
-                <button className="relative text-slate-500">
-                  <BellIcon className="h-6 w-6" />
-                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-blue-500" />
-                </button>
 
                 <div className="flex items-center gap-3">
                   {/* DOCTOR IMAGE PLACEHOLDER */}
@@ -705,7 +701,6 @@ export default function DoctorVerificationsPage() {
                     <p className="text-sm font-bold text-[#0b2740]">Doctor</p>
                     <p className="text-xs text-slate-500">Medical Staff</p>
                   </div>
-                  <ChevronRight className="hidden h-4 w-4 rotate-90 text-slate-500 md:block" />
                 </div>
               </div>
             </header>
@@ -748,11 +743,16 @@ export default function DoctorVerificationsPage() {
                     </div>
                   </div>
 
-                  {/* HERO IMAGE PLACEHOLDER */}
-                  <div className="hidden h-[170px] items-center justify-center rounded-full bg-slate-50 text-center text-sm text-slate-400 md:flex">
-                    verification
-                    <br />
-                    illustration placeholder
+                  {/* HERO IMAGE */}
+                  <div className="relative hidden h-[145px] items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 md:flex">
+                    <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-100/70" />
+                    <div className="absolute bottom-[-35px] left-12 h-24 w-24 rounded-full bg-orange-100/70" />
+
+                    <img
+                      src="/foto-verif-doc.png"
+                      alt="Doctor verification illustration"
+                      className="relative z-10 h-[155px] w-auto object-contain drop-shadow-xl"
+                    />
                   </div>
                 </div>
               </div>

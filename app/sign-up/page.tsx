@@ -355,52 +355,38 @@ export default function SignUpPage() {
                     </button>
 
                     <div className="flex h-full flex-col items-center justify-center pt-8">
-                        <div className="relative mb-20 w-[410px] rounded-[9px] bg-white px-9 py-8 text-[#07324a] shadow-lg">
-                            <div className="max-w-[230px]">
-                                <h2 className="text-[27px] font-bold leading-[1.15] tracking-tight">
+                        <div className="relative mb-20 w-[520px] overflow-hidden rounded-[28px] bg-white px-10 py-9 text-[#07324a] shadow-[0_28px_80px_rgba(7,50,74,0.22)]">
+                            {/* soft background accents */}
+                            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-100/70" />
+                            <div className="absolute bottom-[-70px] right-20 h-40 w-40 rounded-full bg-cyan-100/60" />
+                            <div className="absolute right-0 top-0 h-full w-[58%] bg-gradient-to-l from-blue-50 via-blue-50/80 to-transparent" />
+
+                            {/* text */}
+                            <div className="relative z-10 max-w-[250px]">
+                                <p className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-600">
+                                    Smart reminder
+                                </p>
+
+                                <h2 className="text-[31px] font-extrabold leading-[1.1] tracking-tight text-[#06283d]">
                                     Reach your health goals faster
                                 </h2>
 
-                                <p className="mt-5 text-[14px] leading-[1.7] text-slate-500">
-                                    Use your Adherify app to track your daily medication schedule
-                                    easily.
+                                <p className="mt-5 text-[14px] leading-[1.8] text-slate-500">
+                                    Track medication schedules, get timely reminders, and stay consistent
+                                    with your daily treatment.
                                 </p>
 
-                                <button className="mt-7 rounded-full bg-[#07324a] px-8 py-3 text-[12px] font-semibold text-white">
+                                <button className="mt-7 rounded-full bg-[#07324a] px-8 py-3 text-[12px] font-bold text-white shadow-lg shadow-[#07324a]/20 transition hover:bg-[#062a3e]">
                                     Learn more
                                 </button>
                             </div>
 
-                            {/*
-                RUANG GAMBAR OBAT + JAM:
-                nanti kalau gambar sudah ada, taruh di public/medicine-illustration.png
-                lalu ganti placeholder ini dengan:
-
-                <img
-                  src="/medicine-illustration.png"
-                  alt="Medication reminder illustration"
-                  className="absolute right-7 top-12 h-[155px] w-auto"
-                />
-              */}
-                            <div className="absolute right-7 top-12 flex h-[155px] w-[155px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center text-[11px] leading-4 text-slate-400">
-                                image
-                                <br />
-                                placeholder
-                            </div>
-                        </div>
-
-                        <div className="text-center">
-                            <h2 className="text-[32px] font-bold tracking-tight">
-                                Introducing smart reminders
-                            </h2>
-
-                            <p className="mx-auto mt-7 max-w-[480px] text-[15px] leading-[1.55] text-blue-100">
-                                Analyzing your daily medication habits ensures you always stay
-                                on track. Our smart system reminds you exactly when it&apos;s
-                                time to take your pills...
-                            </p>
-
-                            <div className="mt-16 text-blue-100/80">‹ · ◔ · ›</div>
+                            {/* image */}
+                            <img
+                                src="/foto-jam-obat-rmv.png"
+                                alt="Medication reminder illustration"
+                                className="absolute right-8 top-1/2 z-10 h-[220px] w-auto -translate-y-1/2 object-contain drop-shadow-2xl"
+                            />
                         </div>
                     </div>
                 </section>

@@ -691,10 +691,6 @@ export default function DoctorDashboardPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-4">
-                <button className="relative text-slate-500">
-                  <BellIcon className="h-6 w-6" />
-                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-blue-500" />
-                </button>
 
                 <div className="flex items-center gap-3">
                   {/* DOCTOR IMAGE PLACEHOLDER */}
@@ -705,7 +701,6 @@ export default function DoctorDashboardPage() {
                     <p className="text-sm font-bold text-[#0b2740]">{displayName}</p>
                     <p className="text-xs text-slate-500">Medical Staff</p>
                   </div>
-                  <ChevronRight className="hidden h-4 w-4 rotate-90 text-slate-500 md:block" />
                 </div>
               </div>
             </header>
@@ -757,10 +752,13 @@ export default function DoctorDashboardPage() {
                 </div>
 
                 {/* HERO IMAGE PLACEHOLDER */}
-                <div className="hidden h-[240px] items-center justify-center rounded-full bg-slate-50 text-center text-sm text-slate-400 lg:flex">
-                  doctor dashboard
-                  <br />
-                  illustration placeholder
+                {/* HERO IMAGE */}
+                <div className="hidden h-[240px] items-center justify-center lg:flex">
+                  <img
+                    src="/foto-dashboard-rmv.png"
+                    alt="Doctor dashboard medication illustration"
+                    className="h-[240px] w-auto object-contain drop-shadow-xl"
+                  />
                 </div>
               </div>
             </section>
