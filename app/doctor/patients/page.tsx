@@ -52,15 +52,27 @@ const emptyForm: PatientForm = {
 };
 
 function getPatientName(patient: Patient) {
-    return patient.full_name || patient.name || "Unnamed Patient";
+    return (
+        patient.full_name?.trim() ||
+        patient.name?.trim() ||
+        patient.username?.trim() ||
+        patient.user?.username?.trim() ||
+        patient.user?.email?.split("@")[0] ||
+        patient.email?.split("@")[0] ||
+        "Patient"
+    );
 }
 
 function getPatientEmail(patient: Patient) {
-    return patient.user?.email || patient.email || "-";
+    return patient.user?.email || patient.email || "Not set";
 }
 
 function getPatientDisease(patient: Patient) {
-    return patient.main_disease || patient.disease_note || "-";
+    return (
+        patient.main_disease?.trim() ||
+        patient.disease_note?.trim() ||
+        "Not set"
+    );
 }
 
 function getInitials(name: string) {
@@ -75,6 +87,28 @@ function getInitials(name: string) {
 function normalizeStatus(status?: string) {
     if (!status) return "PENDING";
     return status.toUpperCase();
+}
+
+function getWhatsappValidationMessage(value: string) {
+    const cleanedValue = value.trim();
+
+    if (!cleanedValue) {
+        return "WhatsApp number is required.";
+    }
+
+    if (cleanedValue.startsWith("08")) {
+        return "Nomor WhatsApp harus diawali 62, bukan 08. Contoh: 628123456789.";
+    }
+
+    if (!cleanedValue.startsWith("62")) {
+        return "Nomor WhatsApp harus diawali 62. Contoh: 628123456789.";
+    }
+
+    if (!/^62\d{8,15}$/.test(cleanedValue)) {
+        return "Format nomor WhatsApp tidak valid. Gunakan angka saja, contoh: 628123456789.";
+    }
+
+    return "";
 }
 
 function getPatientStatus(patient: Patient) {
@@ -101,6 +135,7 @@ function statusStyle(status?: string) {
 
     return "bg-slate-100 text-slate-600";
 }
+
 
 function DashboardIcon({ className = "h-5 w-5" }: { className?: string }) {
     return (
@@ -342,7 +377,6 @@ export default function DoctorPatientsPage() {
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [patientsFromApi, setPatientsFromApi] = useState<Patient[]>([]);
-    const [loading, setLoading] = useState(true);
     const [apiError, setApiError] = useState("");
 
     const [search, setSearch] = useState("");
@@ -350,9 +384,14 @@ export default function DoctorPatientsPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-    const [form, setForm] = useState<PatientForm>(emptyForm);
+
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
+
+    const [form, setForm] = useState(emptyForm);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [whatsappError, setWhatsappError] = useState("");
 
     const patients = patientsFromApi;
 
@@ -425,11 +464,14 @@ export default function DoctorPatientsPage() {
     function openAddModal() {
         setEditingPatient(null);
         setForm(emptyForm);
+        setWhatsappError("");
         setFormError("");
         setIsModalOpen(true);
     }
 
     function openEditModal(patient: Patient) {
+        const whatsappNumber = patient.whatsapp_number || patient.phone || "";
+
         setEditingPatient(patient);
         setForm({
             full_name: getPatientName(patient),
@@ -437,8 +479,9 @@ export default function DoctorPatientsPage() {
             password: "",
             age: String(patient.age || ""),
             main_disease: getPatientDisease(patient),
-            whatsapp_number: patient.whatsapp_number || patient.phone || "",
+            whatsapp_number: whatsappNumber,
         });
+        setWhatsappError("");
         setFormError("");
         setIsModalOpen(true);
     }
@@ -447,12 +490,23 @@ export default function DoctorPatientsPage() {
         setIsModalOpen(false);
         setEditingPatient(null);
         setForm(emptyForm);
+        setWhatsappError("");
         setFormError("");
     }
 
     async function handleSubmitPatient(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        setFormError("");
+        setWhatsappError("");
 
+        const whatsappValidationMessage = getWhatsappValidationMessage(
+            form.whatsapp_number
+        );
+
+        if (whatsappValidationMessage) {
+            setWhatsappError(whatsappValidationMessage);
+            return;
+        }
         if (editingPatient) {
             if (!form.full_name || !form.age || !form.main_disease || !form.whatsapp_number) {
                 setFormError("Nama, umur, penyakit, dan nomor WhatsApp wajib diisi.");
@@ -705,28 +759,28 @@ export default function DoctorPatientsPage() {
                                 icon={<UserIcon className="h-7 w-7" />}
                                 title="Total Patients"
                                 value={totalPatients}
-                                subtitle=" "
+                                subtitle="Registered patients"
                                 tone="blue"
                             />
                             <StatCard
                                 icon={<CheckIcon className="h-7 w-7" />}
                                 title="Active Patients"
                                 value={activePatients}
-                                subtitle=" "
+                                subtitle="Approved records"
                                 tone="green"
                             />
                             <StatCard
                                 icon={<ClockIcon className="h-7 w-7" />}
                                 title="Waiting Verification"
                                 value={waitingPatients}
-                                subtitle=" "
+                                subtitle="Needs review"
                                 tone="yellow"
                             />
                             <StatCard
                                 icon={<XIcon className="h-7 w-7" />}
                                 title="Rejected Patients"
                                 value={rejectedPatients}
-                                subtitle=" "
+                                subtitle="Need follow up"
                                 tone="red"
                             />
                         </section>
@@ -1046,39 +1100,43 @@ export default function DoctorPatientsPage() {
                                     </div>
                                 )}
 
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label className="mb-2 block text-sm font-bold text-[#0b2740]">
-                                            Age
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={form.age}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({ ...prev, age: e.target.value }))
-                                            }
-                                            placeholder="27"
-                                            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-[#0b2740] outline-none transition focus:border-[#07324a] focus:ring-4 focus:ring-[#07324a]/10"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="mb-2 block text-sm font-bold text-[#0b2740]">
+                                        WhatsApp Number
+                                    </label>
 
-                                    <div>
-                                        <label className="mb-2 block text-sm font-bold text-[#0b2740]">
-                                            WhatsApp Number
-                                        </label>
-                                        <input
-                                            value={form.whatsapp_number}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    whatsapp_number: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="681234567890"
-                                            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-[#0b2740] outline-none transition focus:border-[#07324a] focus:ring-4 focus:ring-[#07324a]/10"
-                                        />
-                                    </div>
+                                    <input
+                                        value={form.whatsapp_number}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, "");
+
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                whatsapp_number: value,
+                                            }));
+
+                                            setWhatsappError(value ? getWhatsappValidationMessage(value) : "");
+                                        }}
+                                        onBlur={() => {
+                                            setWhatsappError(getWhatsappValidationMessage(form.whatsapp_number));
+                                        }}
+                                        placeholder="628123456789"
+                                        inputMode="numeric"
+                                        className={`h-12 w-full rounded-2xl border bg-white px-4 text-sm text-[#0b2740] outline-none transition focus:ring-4 ${whatsappError
+                                            ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                            : "border-slate-200 focus:border-[#07324a] focus:ring-[#07324a]/10"
+                                            }`}
+                                    />
+
+                                    {whatsappError ? (
+                                        <p className="mt-2 text-xs font-medium text-red-600">
+                                            {whatsappError}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-2 text-xs text-slate-500">
+                                            Gunakan format internasional, contoh: 628123456789.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {formError && (
@@ -1098,7 +1156,7 @@ export default function DoctorPatientsPage() {
 
                                     <button
                                         type="submit"
-                                        disabled={submitting}
+                                        disabled={submitting || Boolean(whatsappError)}
                                         className="h-12 rounded-full bg-[#07324a] px-8 text-sm font-bold text-white transition hover:bg-[#05283b] disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {submitting
