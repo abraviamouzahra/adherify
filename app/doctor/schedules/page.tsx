@@ -38,6 +38,8 @@ type Schedule = {
     frequency?: string;
     notes?: string;
     instruction?: string;
+    start_date?: string;
+    end_date?: string;
     created_at?: string;
     patient?: Patient;
     medicine?: Medication;
@@ -157,7 +159,7 @@ function getInitials(name: string) {
 }
 
 function formatTime(time?: string) {
-    if (!time) return "08:00 AM";
+    if (!time) return "-";
 
     if (time.includes("AM") || time.includes("PM")) return time;
 
@@ -190,6 +192,32 @@ function getExcelFileName(response: Response) {
 
     const today = new Date().toISOString().slice(0, 10);
     return `jadwal_obat_${today}.xlsx`;
+}
+
+function getTodayDateString() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function isDateBefore(date: string, compareDate: string) {
+    return date < compareDate;
+}
+
+function isValidScheduleDateRange(startDate: string, endDate: string) {
+    const today = getTodayDateString();
+
+    if (isDateBefore(startDate, today)) {
+        return "Start date tidak boleh sebelum hari ini.";
+    }
+
+    if (isDateBefore(endDate, today)) {
+        return "End date tidak boleh sebelum hari ini.";
+    }
+
+    if (isDateBefore(endDate, startDate)) {
+        return "End date tidak boleh lebih awal dari start date.";
+    }
+
+    return "";
 }
 
 function DashboardIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -543,8 +571,14 @@ export default function DoctorSchedulesPage() {
     }
 
     function openCreateForm() {
+        const today = getTodayDateString();
+
         setEditingSchedule(null);
-        setForm(emptyForm);
+        setForm({
+            ...emptyForm,
+            start_date: today,
+            end_date: today,
+        });
         setFormError("");
         setIsFormOpen(true);
     }
@@ -561,8 +595,8 @@ export default function DoctorSchedulesPage() {
                 schedule.medication?.id ||
                 "",
             dose: schedule.dose || "1 tablet",
-            start_date: "2026-06-01",
-            end_date: "2026-06-30",
+            start_date: schedule.start_date?.slice(0, 10) || getTodayDateString(),
+            end_date: schedule.end_date?.slice(0, 10) || schedule.start_date?.slice(0, 10) || getTodayDateString(),
             times: schedule.time || schedule.times?.join(",") || "",
         });
 
@@ -589,6 +623,16 @@ export default function DoctorSchedulesPage() {
             !form.times
         ) {
             setFormError("Patient, medication, dose, start date, end date, dan times wajib diisi.");
+            return;
+        }
+
+        const dateValidationMessage = isValidScheduleDateRange(
+            form.start_date,
+            form.end_date
+        );
+
+        if (dateValidationMessage) {
+            setFormError(dateValidationMessage);
             return;
         }
 
@@ -662,7 +706,7 @@ export default function DoctorSchedulesPage() {
 
             if (fromDate && toDate && fromDate > toDate) {
                 throw new Error("Tanggal awal tidak boleh lebih besar dari tanggal akhir.");
-            }   
+            }
 
             const params = new URLSearchParams();
 
@@ -814,7 +858,7 @@ export default function DoctorSchedulesPage() {
                             </div>
 
                             <div className="ml-auto flex items-center gap-4">
-                            
+
 
                                 <div className="flex items-center gap-3">
                                     {/* DOCTOR IMAGE PLACEHOLDER */}
@@ -1301,9 +1345,21 @@ export default function DoctorSchedulesPage() {
                                         <input
                                             type="date"
                                             value={form.start_date || ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({ ...prev, start_date: e.target.value }))
-                                            }
+                                            min={getTodayDateString()}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    start_date: value,
+                                                    end_date:
+                                                        prev.end_date && prev.end_date < value
+                                                            ? ""
+                                                            : prev.end_date,
+                                                }));
+
+                                                setFormError("");
+                                            }}
                                             className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none focus:border-[#07324a]"
                                         />
                                     </div>
@@ -1315,13 +1371,19 @@ export default function DoctorSchedulesPage() {
                                         <input
                                             type="date"
                                             value={form.end_date || ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({ ...prev, end_date: e.target.value }))
-                                            }
+                                            min={form.start_date || getTodayDateString()}
+                                            onChange={(e) => {
+                                                setForm((prev) => ({ ...prev, end_date: e.target.value }));
+                                                setFormError("");
+                                            }}
                                             className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none focus:border-[#07324a]"
                                         />
                                     </div>
                                 </div>
+
+                                <p className="text-xs leading-5 text-slate-500">
+                                    Start date dan end date tidak boleh sebelum hari ini. End date juga tidak boleh lebih awal dari start date.
+                                </p>
 
                                 <div>
                                     <label className="mb-2 block text-sm font-bold text-[#0b2740]">
