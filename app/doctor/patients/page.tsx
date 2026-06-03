@@ -1102,6 +1102,26 @@ export default function DoctorPatientsPage() {
 
                                 <div>
                                     <label className="mb-2 block text-sm font-bold text-[#0b2740]">
+                                        Age
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        value={form.age}
+                                        onChange={(e) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                age: e.target.value,
+                                            }))
+                                        }
+                                        placeholder="24"
+                                        min={1}
+                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-[#0b2740] outline-none transition focus:border-[#07324a] focus:ring-4 focus:ring-[#07324a]/10"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-bold text-[#0b2740]">
                                         WhatsApp Number
                                     </label>
 
