@@ -27,7 +27,6 @@ export default function SignUpPage() {
 
     const [doctors, setDoctors] = useState<DoctorOption[]>([]);
     const [selectedDoctorId, setSelectedDoctorId] = useState("");
-    const [connectWithDoctor, setConnectWithDoctor] = useState(false);
     const [loadingDoctors, setLoadingDoctors] = useState(false);
 
     const [loading, setLoading] = useState(false);
@@ -69,6 +68,12 @@ export default function SignUpPage() {
         setLoading(true);
         setError("");
 
+        if (role === "PATIENT" && !selectedDoctorId) {
+            setError("Pasien wajib memilih dokter.");
+            setLoading(false);
+            return;
+        }
+
         try {
             const payload: {
                 email: string;
@@ -83,7 +88,7 @@ export default function SignUpPage() {
                 role,
             };
 
-            if (role === "PATIENT" && connectWithDoctor && selectedDoctorId) {
+            if (role === "PATIENT") {
                 payload.doctorId = selectedDoctorId;
             }
 
@@ -203,8 +208,8 @@ export default function SignUpPage() {
                                         type="button"
                                         onClick={() => {
                                             setRole("DOCTOR");
-                                            setConnectWithDoctor(false);
                                             setSelectedDoctorId("");
+                                            setError("");
                                         }}
                                         className={`rounded-[8px] text-[14px] font-semibold transition sm:text-[17px] xl:text-[13px] ${role === "DOCTOR"
                                             ? "bg-[#07324a] text-white shadow-sm"
@@ -216,7 +221,10 @@ export default function SignUpPage() {
 
                                     <button
                                         type="button"
-                                        onClick={() => setRole("PATIENT")}
+                                        onClick={() => {
+                                            setRole("PATIENT");
+                                            setError("");
+                                        }}
                                         className={`rounded-[8px] text-[14px] font-semibold transition sm:text-[17px] xl:text-[13px] ${role === "PATIENT"
                                             ? "bg-[#07324a] text-white shadow-sm"
                                             : "text-slate-500 hover:text-[#07324a]"
@@ -271,71 +279,49 @@ export default function SignUpPage() {
 
                             {role === "PATIENT" && (
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                    <label className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={connectWithDoctor}
+                                    <div>
+                                        <label className="mb-2 block text-sm font-semibold text-[#0b2740]">
+                                            Choose doctor <span className="text-red-500">*</span>
+                                        </label>
+
+                                        <select
+                                            value={selectedDoctorId}
                                             onChange={(e) => {
-                                                setConnectWithDoctor(e.target.checked);
-
-                                                if (!e.target.checked) {
-                                                    setSelectedDoctorId("");
-                                                }
+                                                setSelectedDoctorId(e.target.value);
+                                                setError("");
                                             }}
-                                            className="mt-1 h-4 w-4"
-                                        />
+                                            required
+                                            disabled={loadingDoctors}
+                                            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-[#0b2740] outline-none focus:border-[#07324a] disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <option value="">
+                                                {loadingDoctors ? "Loading doctors..." : "Select doctor"}
+                                            </option>
 
-                                        <span>
-                                            <span className="block text-sm font-semibold text-[#0b2740]">
-                                                Connect with a doctor now
-                                            </span>
-                                            <span className="mt-1 block text-xs leading-5 text-slate-500">
-                                                Choose this if your account should be linked to a doctor after registration.
-                                            </span>
-                                        </span>
-                                    </label>
-
-                                    {connectWithDoctor && (
-                                        <div className="mt-4">
-                                            <label className="mb-2 block text-sm font-semibold text-[#0b2740]">
-                                                Choose doctor
-                                            </label>
-
-                                            <select
-                                                value={selectedDoctorId}
-                                                onChange={(e) => setSelectedDoctorId(e.target.value)}
-                                                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-[#0b2740] outline-none focus:border-[#07324a]"
-                                            >
-                                                <option value="">
-                                                    {loadingDoctors ? "Loading doctors..." : "Select doctor"}
+                                            {doctors.map((doctor) => (
+                                                <option key={doctor.id} value={doctor.id}>
+                                                    {doctor.username || doctor.email || doctor.id}
                                                 </option>
+                                            ))}
+                                        </select>
 
-                                                {doctors.map((doctor) => (
-                                                    <option key={doctor.id} value={doctor.id}>
-                                                        {doctor.username || doctor.email || doctor.id}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                        <p className="mt-2 text-xs leading-5 text-slate-500">
+                                            Patient accounts must be connected to a doctor so schedules and
+                                            verification can be assigned correctly.
+                                        </p>
 
-                                            {!loadingDoctors && doctors.length === 0 && (
-                                                <p className="mt-2 text-xs text-amber-600">
-                                                    Doctor list is unavailable. You can register without assigning a doctor.
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {error && (
-                                <div className="rounded-[8px] bg-red-50 px-4 py-3 text-[13px] text-red-600 sm:text-[15px] xl:text-[13px]">
-                                    {error}
+                                        {!loadingDoctors && doctors.length === 0 && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                Doctor list is unavailable. Please refresh the page before registering as a patient.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || (role === "PATIENT" && !selectedDoctorId)}
                                 className="h-[52px] w-full rounded-[22px] bg-[#07324a] text-[17px] font-semibold text-white transition hover:bg-[#062a3e] disabled:cursor-not-allowed disabled:opacity-60 sm:h-[68px] sm:rounded-[16px] sm:text-[22px] xl:h-[52px] xl:rounded-[10px] xl:text-[15px]"
                             >
                                 {loading ? "Creating account..." : `Sign up as ${role === "DOCTOR" ? "Doctor" : "Patient"}`}
