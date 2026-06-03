@@ -246,10 +246,6 @@ export default function SignInPage() {
                     <div className="absolute -right-16 -top-32 h-[440px] w-[440px] rounded-full bg-white/10" />
                     <div className="absolute bottom-[-180px] right-[-70px] h-[450px] w-[450px] rounded-full bg-[#1e659d]/50" />
 
-                    <button className="absolute right-[150px] top-[76px] flex items-center gap-2 text-[14px] font-semibold text-white">
-                        <span>☊</span>
-                        <span>Support</span>
-                    </button>
 
                     <div className="flex h-full flex-col items-center justify-center pt-8">
                         <div className="relative mb-20 w-[520px] overflow-hidden rounded-[28px] bg-white px-10 py-9 text-[#07324a] shadow-[0_28px_80px_rgba(7,50,74,0.22)]">
@@ -272,10 +268,6 @@ export default function SignInPage() {
                                     Track medication schedules, get timely reminders, and stay consistent
                                     with your daily treatment.
                                 </p>
-
-                                <button className="mt-7 rounded-full bg-[#07324a] px-8 py-3 text-[12px] font-bold text-white shadow-lg shadow-[#07324a]/20 transition hover:bg-[#062a3e]">
-                                    Learn more
-                                </button>
                             </div>
 
                             {/* image */}
